@@ -1,5 +1,7 @@
 # Created by .ignore support plugin (hsz.mobi)
+studyvertx.iml
 .gradle
 .idea
 build
-studyvertx.iml
+out
+log
