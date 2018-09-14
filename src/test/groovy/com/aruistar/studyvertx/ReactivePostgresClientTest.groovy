@@ -50,6 +50,45 @@ class ReactivePostgresClientTest {
 
     }
 
+
+    @Test
+    void testTransaction(TestContext context) {
+        Async async = context.async()
+        pgClient.getConnection({ res ->
+            if (res.succeeded()) {
+
+                // Transaction must use a connection
+                def conn = res.result()
+
+                // Begin the transaction
+                def tx = conn.begin().abortHandler({ v ->
+                    println("Transaction failed => rollbacked")
+                    context.assertTrue(true)
+                    async.complete()
+                })
+
+                conn.query("INSERT INTO Users (first_name,last_name) VALUES ('Julien','Viet')", { ar ->
+                    // Works fine of course
+                    context.assertTrue(ar.succeeded())
+                })
+                conn.query("INSERT INTO Users (first_name,last_name) VALUES ('Julien','Viet')", { ar ->
+                    // Fails and triggers transaction aborts
+                    context.assertFalse(ar.succeeded())
+                })
+
+                // Attempt to commit the transaction
+                tx.commit({ ar ->
+                    // But transaction abortion fails it
+                    context.assertFalse(ar.succeeded())
+                    // Return the connection to the pool
+                    conn.close()
+                })
+            }
+        })
+
+
+    }
+
     @Test
     void testPubAndSub(TestContext context) {
         def async = context.async()
